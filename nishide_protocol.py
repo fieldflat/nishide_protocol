@@ -821,6 +821,33 @@ def comparison_test(a1_share, b1_share, a2_share, b2_share, a3_share, b3_share):
 
     return t1_share, t2_share, t3_share
 
+def equality_test(a1_share, b1_share, a2_share, b2_share, a3_share, b3_share):
+    r1_share_list, r2_share_list, r3_share_list = sub_rbvs()
+    r1_share = decomposition(r1_share_list)
+    r2_share = decomposition(r2_share_list)
+    r3_share = decomposition(r3_share_list)
+    c1_share = add(sub(a1_share, b1_share), r1_share)
+    c2_share = add(sub(a2_share, b2_share), r2_share)
+    c3_share = add(sub(a3_share, b3_share), r3_share)
+    c = restore(c1_share, c2_share, c3_share)
+    c_list = [int(x) for x in bin(c)[2:]]
+    c_list = [0]*(BIT-len(c_list)) + c_list
+    c1_dash_list = []
+    c2_dash_list = []
+    c3_dash_list = []
+    for i in range(0, BIT):
+        if c_list[i] == 1:
+            c1_dash_list.append(r1_share_list[i])
+            c2_dash_list.append(r2_share_list[i])
+            c3_dash_list.append(r3_share_list[i])
+        else:
+            c1_dash_list.append(sub(1, r1_share_list[i]))
+            c2_dash_list.append(sub(0, r2_share_list[i]))
+            c3_dash_list.append(sub(0, r3_share_list[i]))
+    
+    ret1, ret2, ret3 = sub_unbounded_fan_in_and(c1_dash_list, c2_dash_list, c3_dash_list)
+    return ret1, ret2, ret3
+
 
 
 # =======================
@@ -834,8 +861,6 @@ if __name__ == '__main__':
     # RBVS
     # shares1, shares2, shares3 = sub_rbvs()
     share1, share2, share3 = sub_rns()
-    print((share1+share2+share3)%MOD_P)
     share11, share22, share33 = sub_rns()
-    print((share11+share22+share33)%MOD_P)
-    ret1, ret2, ret3 = comparison_test(share1, share11, share2, share22, share3, share33)
+    ret1, ret2, ret3 = equality_test(share1, share11, share2, share22, share3, share33)
     print((ret1 + ret2 + ret3) % MOD_P)
