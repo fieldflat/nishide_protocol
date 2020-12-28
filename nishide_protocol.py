@@ -597,6 +597,60 @@ def sub_prefix_or(bit_share_list1, bit_share_list2, bit_share_list3): # test: ok
     return ret1_share_list, ret2_share_list, ret3_share_list
 
 
+def sub_bitwise_less_than(a1_bit_share_list, b1_bit_share_list, a2_bit_share_list, b2_bit_share_list, a3_bit_share_list, b3_bit_share_list):
+    c1_share_list = []
+    c2_share_list = []
+    c3_share_list = []
+    for i in range(0, BIT):
+        t1 = add(a1_bit_share_list[i], b1_bit_share_list[i])
+        t2 = add(a2_bit_share_list[i], b2_bit_share_list[i])
+        t3 = add(a3_bit_share_list[i], b3_bit_share_list[i])
+        s1, s2, s3 = share_mult(
+            a1_bit_share_list[i], b1_bit_share_list[i],
+            a2_bit_share_list[i], b2_bit_share_list[i],
+            a3_bit_share_list[i], b3_bit_share_list[i]
+        )
+        s1 = mult(s1, 2)
+        s2 = mult(s2, 2)
+        s3 = mult(s3, 2)
+        c1_share_list.append(sub(t1, s1))
+        c2_share_list.append(sub(t2, s2))
+        c3_share_list.append(sub(t3, s3))
+    
+    d1_share_list, d2_share_list, d3_share_list = [], [], []
+    for i in range(0, BIT):
+        index = BIT-i
+        d1, d2, d3 = sub_unbounded_fan_in_or(c1_share_list[0:index], c2_share_list[0:index], c3_share_list[0:index])
+        d1_share_list = [d1] + d1_share_list
+        d2_share_list = [d2] + d2_share_list
+        d3_share_list = [d3] + d3_share_list
+
+    e1_share_list = []
+    e2_share_list = []
+    e3_share_list = []
+    for i in range(0, BIT):
+        if i == 0:
+            e1_share_list.append(d1_share_list[i])
+            e2_share_list.append(d2_share_list[i])
+            e3_share_list.append(d3_share_list[i])
+        else:
+            e1_share_list.append(sub(d1_share_list[i], d1_share_list[i-1]))
+            e2_share_list.append(sub(d2_share_list[i], d2_share_list[i-1]))
+            e3_share_list.append(sub(d3_share_list[i], d3_share_list[i-1]))
+    
+    ret1, ret2, ret3 = 0, 0, 0
+    for i in range(0, BIT):
+        t1, t2, t3 = share_mult(
+            e1_share_list[i], b1_bit_share_list[i],
+            e2_share_list[i], b2_bit_share_list[i],
+            e3_share_list[i], b3_bit_share_list[i]
+        )
+        ret1 = add(ret1, t1)
+        ret2 = add(ret2, t2)
+        ret3 = add(ret3, t3)
+    return ret1, ret2, ret3
+
+
 def f_or(x):
     ans = 0
     for j in range(2, BIT+2):
@@ -633,23 +687,14 @@ if __name__ == '__main__':
 
     # RBVS
     shares1, shares2, shares3 = sub_rbvs()
-    # for i in range(0, BIT):
-    #     ret = (shares1[i]+shares2[i]+shares3[i]) % MOD_P
-    #     if i == (BIT-1):
-    #         print(ret, end="\n")
-    #     else:
-    #         print(ret, end=", ")
-    # ans = sub_unbounded_fan_in_and(shares1, shares2, shares3)
-    # print(ans)
-    # print(MOD_P)
+    shares11, shares22, shares33 = sub_rbvs()
     for i in range(0, BIT):
-        r = (shares1[i] + shares2[i] + shares3[i]) % MOD_P
-        print(r, end=", ")
+        print((shares1[i] + shares2[i] + shares3[i]) % MOD_P, end=", ")
     print("")
 
-
-    s1, s2, s3 = sub_prefix_or(shares1, shares2, shares3)
     for i in range(0, BIT):
-        r = (s1[i] + s2[i] + s3[i]) % MOD_P
-        print(r, end=", ")
+        print((shares11[i] + shares22[i] + shares33[i]) % MOD_P, end=", ")
     print("")
+
+    r1, r2, r3 = sub_bitwise_less_than(shares1, shares11, shares2, shares22, shares3, shares33)
+    print((r1 + r2 + r3) % MOD_P)
