@@ -651,6 +651,62 @@ def sub_bitwise_less_than(a1_bit_share_list, b1_bit_share_list, a2_bit_share_lis
     return ret1, ret2, ret3
 
 
+def sub_half_less_than_test(a1_share, a2_share, a3_share):
+    r1_share_list, r2_share_list, r3_share_list = sub_rbvs()
+    r1_share = decomposition(r1_share_list)
+    r2_share = decomposition(r2_share_list)
+    r3_share = decomposition(r3_share_list)
+
+    c1_share = add(mult(2, a1_share), r1_share)
+    c2_share = add(mult(2, a2_share), r2_share)
+    c3_share = add(mult(2, a3_share), r3_share)
+    c = restore(c1_share, c2_share, c3_share)
+    c1_bit_share, c2_bit_share, c3_bit_share = composition(c)
+    t1_share, t2_share, t3_share = sub_bitwise_less_than(c1_bit_share, r1_share_list, c2_bit_share, r2_share_list, c3_bit_share, r3_share_list)
+    if c % 2 == 0:
+        a1_share1, a2_share1, a3_share1 = share_mult(
+            t1_share, sub(1, r1_share_list[BIT-1]),
+            t2_share, sub(0, r2_share_list[BIT-1]),
+            t3_share, sub(0, r3_share_list[BIT-1])
+        )
+        a1_share2, a2_share2, a3_share2 = share_mult(
+            sub(1, t1_share), r1_share_list[BIT-1],
+            sub(0, t2_share), r2_share_list[BIT-1],
+            sub(0, t3_share), r3_share_list[BIT-1]
+        )
+    else:
+        a1_share1, a2_share1, a3_share1 = share_mult(
+            t1_share, r1_share_list[BIT-1],
+            t2_share, r2_share_list[BIT-1],
+            t3_share, r3_share_list[BIT-1]
+        )
+        a1_share2, a2_share2, a3_share2 = share_mult(
+            sub(1, t1_share), sub(1, r1_share_list[BIT-1]),
+            sub(0, t2_share), sub(0, r2_share_list[BIT-1]),
+            sub(0, t3_share), sub(0, r3_share_list[BIT-1])
+        )
+    
+    return sub(1, add(a1_share1, a1_share2)), sub(0, add(a2_share1, a2_share2)), sub(0, add(a3_share1, a3_share2))
+
+
+
+def decomposition(r_share_list):
+    l = len(r_share_list)
+    ans = 0
+    for i in range(0, l):
+        ans = add(ans, mult(2**(l-1-i), r_share_list[i]))
+    return ans
+
+
+def composition(c):
+    c_list = [int(x) for x in bin(c)[2:]]
+    c_list = [0]*(BIT-len(c_list)) + c_list
+    r1, r2, _ = sub_rbvs()
+    r3 = []
+    for i in range(0, BIT):
+        r3.append(sub(c_list[i], add(r1[i], r2[i])))
+    return r1, r2, r3
+
 def f_or(x):
     ans = 0
     for j in range(2, BIT+2):
@@ -687,14 +743,9 @@ if __name__ == '__main__':
 
     # RBVS
     shares1, shares2, shares3 = sub_rbvs()
-    shares11, shares22, shares33 = sub_rbvs()
-    for i in range(0, BIT):
-        print((shares1[i] + shares2[i] + shares3[i]) % MOD_P, end=", ")
-    print("")
-
-    for i in range(0, BIT):
-        print((shares11[i] + shares22[i] + shares33[i]) % MOD_P, end=", ")
-    print("")
-
-    r1, r2, r3 = sub_bitwise_less_than(shares1, shares11, shares2, shares22, shares3, shares33)
-    print((r1 + r2 + r3) % MOD_P)
+    shares1, shares2, shares3 = sub_rns()
+    print((shares1+shares2+shares3)%MOD_P)
+    print(MOD_P//2)
+    t1, t2, t3 = sub_half_less_than_test(shares1, shares2, shares3)
+    ret = restore(t1, t2, t3)
+    print(ret)
