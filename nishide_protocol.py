@@ -734,6 +734,53 @@ def restore(x1, x2, x3):  # test: ok
 
 
 # =======================
+# main protocols
+# =======================
+def interval_test(c1, c2, a1_share, a2_share, a3_share):
+    r1_share_list, r2_share_list, r3_share_list = sub_rbvs()
+    r1_share = decomposition(r1_share_list)
+    r2_share = decomposition(r2_share_list)
+    r3_share = decomposition(r3_share_list)
+    c1_share = add(a1_share, r1_share)
+    c2_share = add(a2_share, r2_share)
+    c3_share = add(a3_share, r3_share)
+    c = restore(c1_share, c2_share, c3_share)
+    if not ((c1 < c) and (c < c2)):
+        if c2 <= c:
+            r_row = c - c2
+            r_high = c - c1
+        elif (c <= c1):
+            r_row = c + MOD_P - c2
+            r_high = c + MOD_P - c1
+        r1_row, r2_row, r3_row = composition(r_row)
+        r1_high, r2_high, r3_high = composition(r_high)
+        t1_row, t2_row, t3_row = sub_bitwise_less_than(r1_row, r1_share_list, r2_row, r2_share_list, r3_row, r3_share_list)
+        t1_high, t2_high, t3_high = sub_bitwise_less_than(r1_share_list, r1_high, r2_share_list, r2_high, r3_share_list, r3_high)
+        ret1, ret2, ret3 = share_mult(
+            t1_row, t1_high,
+            t2_row, t2_high,
+            t3_row, t3_high
+        )
+        return ret1, ret2, ret3
+    else:
+        r_row = (c - c1 - 1) % MOD_P
+        r_high = (c + MOD_P - c2 + 1) % MOD_P
+        r1_row, r2_row, r3_row = composition(r_row)
+        r1_high, r2_high, r3_high = composition(r_high)
+        t1_row, t2_row, t3_row = sub_bitwise_less_than(
+            r1_row, r1_share_list, r2_row, r2_share_list, r3_row, r3_share_list)
+        t1_high, t2_high, t3_high = sub_bitwise_less_than(
+            r1_share_list, r1_high, r2_share_list, r2_high, r3_share_list, r3_high)
+        ret1, ret2, ret3 = share_mult(
+            t1_row, t1_high,
+            t2_row, t2_high,
+            t3_row, t3_high
+        )
+        return sub(1, ret1), sub(0, ret2), sub(0, ret3)
+
+
+
+# =======================
 # main function
 # =======================
 if __name__ == '__main__':
@@ -742,10 +789,12 @@ if __name__ == '__main__':
     # print('RBS: ', restore(share1, share2, share3))
 
     # RBVS
-    shares1, shares2, shares3 = sub_rbvs()
-    shares1, shares2, shares3 = sub_rns()
-    print((shares1+shares2+shares3)%MOD_P)
-    print(MOD_P//2)
-    t1, t2, t3 = sub_half_less_than_test(shares1, shares2, shares3)
-    ret = restore(t1, t2, t3)
-    print(ret)
+    # shares1, shares2, shares3 = sub_rbvs()
+    share1, share2, share3 = sub_rns()
+    c1 = MOD_P//2
+    c2 = MOD_P-1
+    print(c1)
+    print((share1 + share2 + share3) % MOD_P)
+    print(c2)
+    ret1, ret2, ret3 = interval_test(c1, c2, share1, share2, share3)
+    print((ret1+ ret2 + ret3) % MOD_P)
