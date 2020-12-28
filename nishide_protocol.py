@@ -9,6 +9,7 @@ import sympy
 # BIT = 32
 # MOD_P = 2**BIT - 5
 BIT = 64
+LAMBDA = 8
 MOD_P = 2**BIT - 59
 MAX_INTEGER = 2**(2*BIT) - 1
 BEAVERS = {"P1": [1, 2, 13], "P2": [2, 5, 29], "P3": [4, 1, 14]}
@@ -318,8 +319,7 @@ def sub_unbounded_fan_in_or(bit_share_list1, bit_share_list2, bit_share_list3): 
             share_f2 = add(share_f2, mult(value, A2_exp_list[index-1]))
             share_f3 = add(share_f3, mult(value, A3_exp_list[index-1]))
 
-    ans = add(share_f1, add(share_f2, share_f3))
-    return ans
+    return share_f1, share_f2, share_f3
 
 
 def sub_unbounded_fan_in_and(bit_share_list1, bit_share_list2, bit_share_list3): # test: ok
@@ -492,8 +492,109 @@ def sub_unbounded_fan_in_and(bit_share_list1, bit_share_list2, bit_share_list3):
             share_f2 = add(share_f2, mult(value, A2_exp_list[index-1]))
             share_f3 = add(share_f3, mult(value, A3_exp_list[index-1]))
 
-    ans = add(share_f1, add(share_f2, share_f3))
-    return ans
+    return share_f1, share_f2, share_f3
+
+
+def sub_prefix_or(bit_share_list1, bit_share_list2, bit_share_list3): # test: ok
+    # 1: check
+    x1_share_list = []
+    x2_share_list = []
+    x3_share_list = []
+    for i in range(0, LAMBDA):
+        start = i
+        end = i + LAMBDA
+        x1, x2, x3 = sub_unbounded_fan_in_or(bit_share_list1[start:end]+[0]*(BIT-LAMBDA), bit_share_list2[start:end]+[0]*(BIT-LAMBDA), bit_share_list3[start:end]+[0]*(BIT-LAMBDA))
+        x1_share_list.append(x1)
+        x2_share_list.append(x2)
+        x3_share_list.append(x3)
+    
+    # 2
+    y1_share_list = []
+    y2_share_list = []
+    y3_share_list = []
+    for i in range(0, LAMBDA):
+        y1, y2, y3 = sub_unbounded_fan_in_or(x1_share_list[0:i+1]+[0]*(BIT-(i+1)), x2_share_list[0:i+1]+[0]*(BIT-(i+1)), x3_share_list[0:i+1]+[0]*(BIT-(i+1)))
+        y1_share_list.append(y1)
+        y2_share_list.append(y2)
+        y3_share_list.append(y3)
+    
+    # 3
+    f1_share_list = []
+    f2_share_list = []
+    f3_share_list = []
+    for i in range(0, LAMBDA):
+        if i == 0:
+            f1_share_list.append(x1_share_list[i])
+            f2_share_list.append(x2_share_list[i])
+            f3_share_list.append(x3_share_list[i])
+        else:
+            f1_share_list.append(sub(y1_share_list[i], y1_share_list[i-1]))
+            f2_share_list.append(sub(y2_share_list[i], y2_share_list[i-1]))
+            f3_share_list.append(sub(y3_share_list[i], y3_share_list[i-1]))
+    # 4
+    a1_share_list = []
+    a2_share_list = []
+    a3_share_list = []
+    for j in range(0, LAMBDA):
+        a1_share_sum, a2_share_sum, a3_share_sum = 0, 0, 0
+        for i in range(0, LAMBDA):
+            index = LAMBDA*i+j
+            a1, a2, a3 = share_mult(
+                f1_share_list[i], bit_share_list1[index],
+                f2_share_list[i], bit_share_list2[index],
+                f3_share_list[i], bit_share_list3[index]
+            )
+            a1_share_sum = add(a1_share_sum, a1)
+            a2_share_sum = add(a2_share_sum, a2)
+            a3_share_sum = add(a3_share_sum, a3)
+        a1_share_list.append(a1_share_sum)
+        a2_share_list.append(a2_share_sum)
+        a3_share_list.append(a3_share_sum)
+
+    # 5
+    b1_share_list = []
+    b2_share_list = []
+    b3_share_list = []
+    for j in range(0, LAMBDA):
+        b1, b2, b3 = sub_unbounded_fan_in_or(a1_share_list[0:j+1]+[0]*(BIT-j-1), a2_share_list[0:j+1]+[0]*(BIT-j-1), a3_share_list[0:j+1]+[0]*(BIT-j-1))
+        b1_share_list.append(b1)
+        b2_share_list.append(b2)
+        b3_share_list.append(b3)
+
+    # 6
+    s1_share_list = []
+    s2_share_list = []
+    s3_share_list = []
+    for i in range(0, BIT):
+        if i < LAMBDA:
+            s1_share_list.append(sub(y1_share_list[i], f1_share_list[i]))
+            s2_share_list.append(sub(y2_share_list[i], f2_share_list[i]))
+            s3_share_list.append(sub(y3_share_list[i], f3_share_list[i]))
+        else:
+            s1_share_list.append(1)
+            s2_share_list.append(0)
+            s3_share_list.append(0)
+    
+    # 7
+    ret1_share_list = []
+    ret2_share_list = []
+    ret3_share_list = []
+    for i in range(0, LAMBDA):
+        for j in range(0, LAMBDA):
+            index = LAMBDA*i + j
+            r1, r2, r3 = share_mult(
+                f1_share_list[i], b1_share_list[j],
+                f2_share_list[i], b2_share_list[j],
+                f3_share_list[i], b3_share_list[j]
+            )
+            r1 = add(r1, s1_share_list[i])
+            r2 = add(r2, s2_share_list[i])
+            r3 = add(r3, s3_share_list[i])
+            ret1_share_list.append(r1)
+            ret2_share_list.append(r2)
+            ret3_share_list.append(r3)
+    
+    return ret1_share_list, ret2_share_list, ret3_share_list
 
 
 def f_or(x):
@@ -532,12 +633,23 @@ if __name__ == '__main__':
 
     # RBVS
     shares1, shares2, shares3 = sub_rbvs()
+    # for i in range(0, BIT):
+    #     ret = (shares1[i]+shares2[i]+shares3[i]) % MOD_P
+    #     if i == (BIT-1):
+    #         print(ret, end="\n")
+    #     else:
+    #         print(ret, end=", ")
+    # ans = sub_unbounded_fan_in_and(shares1, shares2, shares3)
+    # print(ans)
+    # print(MOD_P)
     for i in range(0, BIT):
-        ret = (shares1[i]+shares2[i]+shares3[i]) % MOD_P
-        if i == (BIT-1):
-            print(ret, end="\n")
-        else:
-            print(ret, end=", ")
-    ans = sub_unbounded_fan_in_and(shares1, shares2, shares3)
-    print(ans)
-    print(MOD_P)
+        r = (shares1[i] + shares2[i] + shares3[i]) % MOD_P
+        print(r, end=", ")
+    print("")
+
+
+    s1, s2, s3 = sub_prefix_or(shares1, shares2, shares3)
+    for i in range(0, BIT):
+        r = (s1[i] + s2[i] + s3[i]) % MOD_P
+        print(r, end=", ")
+    print("")
