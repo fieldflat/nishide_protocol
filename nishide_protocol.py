@@ -778,6 +778,49 @@ def interval_test(c1, c2, a1_share, a2_share, a3_share):
         )
         return sub(1, ret1), sub(0, ret2), sub(0, ret3)
 
+def comparison_test(a1_share, b1_share, a2_share, b2_share, a3_share, b3_share):
+    w1_share, w2_share, w3_share = sub_half_less_than_test(a1_share, a2_share, a3_share)
+    x1_share, x2_share, x3_share = sub_half_less_than_test(b1_share, b2_share, b3_share)
+    y1_share, y2_share, y3_share = sub_half_less_than_test(
+        sub(a1_share, b1_share),
+        sub(a2_share, b2_share),
+        sub(a3_share, b3_share)
+    )
+    t1_share, t2_share, t3_share = share_mult(
+        x1_share, y1_share,
+        x2_share, y2_share,
+        x3_share, y3_share
+    )
+    xy1_share, xy2_share, xy3_share = t1_share, t2_share, t3_share
+    t1_share = mult(2, t1_share)
+    t1_share = sub(add(x1_share, y1_share), t1_share)
+    t2_share = mult(2, t2_share)
+    t2_share = sub(add(x2_share, y2_share), t2_share)
+    t3_share = mult(2, t3_share)
+    t3_share = sub(add(x3_share, y3_share), t3_share)
+
+    t1_share, t2_share, t3_share = share_mult(
+        w1_share, t1_share,
+        w2_share, t2_share,
+        w3_share, t3_share
+    )
+    t1_share = add(t1_share, 1)
+    t1_share = sub(t1_share, y1_share)
+    t1_share = sub(t1_share, x1_share)
+    t1_share = add(t1_share, xy1_share)
+
+    t2_share = add(t2_share, 0)
+    t2_share = sub(t2_share, y2_share)
+    t2_share = sub(t2_share, x2_share)
+    t2_share = add(t2_share, xy2_share)
+
+    t3_share = add(t3_share, 0)
+    t3_share = sub(t3_share, y3_share)
+    t3_share = sub(t3_share, x3_share)
+    t3_share = add(t3_share, xy3_share)
+
+    return t1_share, t2_share, t3_share
+
 
 
 # =======================
@@ -791,10 +834,8 @@ if __name__ == '__main__':
     # RBVS
     # shares1, shares2, shares3 = sub_rbvs()
     share1, share2, share3 = sub_rns()
-    c1 = MOD_P//2
-    c2 = MOD_P-1
-    print(c1)
-    print((share1 + share2 + share3) % MOD_P)
-    print(c2)
-    ret1, ret2, ret3 = interval_test(c1, c2, share1, share2, share3)
-    print((ret1+ ret2 + ret3) % MOD_P)
+    print((share1+share2+share3)%MOD_P)
+    share11, share22, share33 = sub_rns()
+    print((share11+share22+share33)%MOD_P)
+    ret1, ret2, ret3 = comparison_test(share1, share11, share2, share22, share3, share33)
+    print((ret1 + ret2 + ret3) % MOD_P)
